@@ -1,0 +1,95 @@
+CICD - GitHub Actions
+YAML(Yet Another Markup Language )   It is a human-readable data format used to store or transfer data — just like JSON or XML, but simpler and easier to read. 
+
+GitHub uses YAML for workflows
+
+Features                        Description
+Lists                           Start with a -
+Key-Value                       Key: value
+Objects                         Objects: Properties of Objects
+
+YAML is used to write data in a structured way — especially in:
+Configuration files (settings)
+Data exchange between applications
+Cloud setups (like Docker, Kubernetes)
+AI/ML model configs (like PyTorch, Hugging Face)
+
+Indentention is must
+
+Example:
+student:
+  name: Ramesh Kumar
+  age: 21
+  course: B.Tech
+  skills:
+    - Python
+    - Machine Learning
+    - Data Science
+  address:
+    city: Chennai
+    pincode: 600042
+  is_graduated: false
+
+Same in JSON Format
+{
+  "student": {
+    "name": "Ramesh Kumar",
+    "age": 21,
+    "course": "B.Tech",
+    "skills": ["Python", "Machine Learning", "Data Science"],
+    "address": {
+      "city": "Chennai",
+      "pincode": 600042
+    },
+    "is_graduated": false
+  }
+}
+
+Docker Compose → docker-compose.yml
+Kubernetes → deployment.yaml
+GitHub Actions → .github/workflows/main.yml
+Machine Learning → model configuration files
+
+What is CI/CD ?
+Build ->Unit Tests ->Deploy to stage ->Acceptance tests                                //Continuous Integration 
+Build ->Unit Tests ->Deploy to stage ->Acceptance Tests ->Deploy to Production         //Continuous Deployment
+
+Actions Overview 
+Live in .GitHub/workflows folder
+workflows for derived in YAML, Event oriented
+
+Workflows:
+Events trigger workflows
+workflows contain jobs
+jobs contain jobs
+jobs conatin steps
+steps are commands or actions
+Runners Can an Virtual Machines
+
+Jobs:
+Workflows can conatin multiple jobs
+jobs run in parallel by default
+Each job runs on a Runner
+Steps and Shell Commands run in sequence
+
+Working:
+The main branch, has one feature A, feature A branch of replica of main branch develop feature A , with testcase, build, test and merge with main branch, similar feature b, continuous integration.
+
+Across Multiple team , Dev team, QA team, UAt team, Production House.
+
+Key Steps
+
+Dev team
+Coding
+Version Control
+Code Review
+
+QA team
+Unit Testing
+Integration testing
+End 2 End testing
+
+Continuous Integration -> Building, testing, notification, Fixing , RE build
+Continous Deployment -> Deploy Different Server (like dev server, QA server, production server)
+
+
