@@ -1,0 +1,169 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:         # manual run
+
+env:
+  IMAGE_NAME: myorg/myapp
+
+permissions:
+  contents: read
+  packages: write
+  id-token: write
+
+concurrency:
+  group: cicd-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with: python-version: 3.10
+      - name: Install deps
+        run: pip install -r requirements.txt
+      - name: Run tests
+        run: pytest -q
+
+  build_and_push:
+    name: Build & Push Docker
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up QEMU (optional for multi-arch)
+        uses: docker/setup-qemu-action@v2
+      - name: Login to registry
+        uses: docker/login-action@v2
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GHCR_TOKEN }}
+      - name: Build and push
+        uses: docker/build-push-action@v4
+        with:
+          context: .
+          push: true
+          tags: ghcr.io/${{ github.repository_owner }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+
+  deploy:
+    name: Deploy
+    needs: build_and_push
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - name: Deploy to server via SSH
+        uses: appleboy/ssh-action@v0.1.8
+        with:
+          host: ${{ secrets.HOST }}
+          username: ${{ secrets.HOST_USER }}
+          key: ${{ secrets.HOST_SSH_KEY }}
+          script: |
+            docker pull ghcr.io/${{ github.repository_owner }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+            docker-compose -f production.yml up -d
+
+
+
+This automates: on push to main → run tests → build docker image → push to registry → deploy via SSH (typical CI/CD).
+
+Common workflow keys — quick reference (ordered by how often you use them)
+Use this as a one-line checklist when writing YAML:
+Top-level keys:
+name — human name (optional)
+on — triggers (push, pull_request, schedule, workflow_dispatch, workflow_call). 
+
+GitHub Docs
+env — global environment variables
+permissions — GITHUB_TOKEN permission scoping (important for security). 
+
+GitHub Docs
+concurrency — prevent overlapping runs
+defaults — default shell/working-dir for runs
+workflow_call — used to create reusable workflows
+
+Jobs-level keys:
+jobs — container for individual jobs
+Job identifier (e.g., build) — job-level ID
+name — job display name
+runs-on — runner selection (ubuntu-latest / windows-latest / macos-latest / self-hosted)
+container — run job inside docker image
+services — supporting containers (databases)
+strategy → matrix — multi-version testing
+needs — job dependencies (ordering)
+
+if — conditional execution
+environment — GitHub Environment (for approvals, secrets)
+timeout-minutes — job timeout
+continue-on-error — allow failure without failing workflow
+
+Steps-level keys:
+steps — ordered commands inside a job
+id — step id (used to reference outputs)
+name — step display name
+uses — call an action (Marketplace or repo) — e.g., actions/checkout@v4. 
+
+GitHub
+run — run shell command inline or multi-line script
+with — inputs to uses actions
+env — per-step environment variables
+shell — override shell (bash, pwsh, python, sh)
+working-directory — change dir for that step
+timeout-minutes — step-level timeout
+continue-on-error, if — step-level controls
+outputs — a step can echo outputs consumed by job outputs
+
+Context & expressions:
+${{ secrets.NAME }} — secrets
+${{ github.* }} / ${{ env.* }} / ${{ matrix.* }} — contexts & variables. Use evaluate-expressions reference for conditionals. 
+GitHub Docs
+
+4) Common marketplace actions you’ll use in almost every CI/CD pipeline
+(Use uses: owner/name@version)
+actions/checkout@v4 — checkout repo to runner workspace. 
+
+GitHub
+actions/setup-python@v4 — install Python of chosen version.
+actions/setup-node@v4 — install Node.js.
+actions/cache@v4 — cache dependencies (pip, npm, gradle) to speed builds.
+actions/upload-artifact@v4 — upload build artifacts between jobs / for download.
+actions/download-artifact@v4 — download artifacts uploaded earlier.
+docker/login-action@v2 — login to Docker registry (Docker Hub/GHCR).
+docker/build-push-action@v4 — build and optionally push Docker images.
+appleboy/ssh-action@v0.1.8 — run SSH commands to remote server (deploy).
+peaceiris/actions-gh-pages@v3 — deploy static sites to GitHub Pages.
+softprops/turnstyle or akhileshns/heroku-deploy (examples) — deploy to cloud providers (varies repo).
+peter-evans/create-pull-request — create PRs automatically from workflows.
+github/codeql-action/init & github/codeql-action/analyze — security scanning with CodeQL.
+actions/setup-java@v4 — setup Java JDK.
+actions/setup-go@v4 — setup Go environment.
+actions/upload-release-asset — attach artifacts to GitHub Releases.
+actions/cache, actions/upload-artifact — essential for caching & artifacts.
+For many cloud providers there are official or community actions (AWS, GCP, Azure) for auth, deploy and uploading artifacts. Always check Marketplace and docs for the latest versions.
+
+5) Best practices & security notes (short)
+Pin versions: use pinned tags like @v4 or commit SHA to avoid surprising changes.
+Least privilege: scope permissions for GITHUB_TOKEN. 
+
+GitHub Docs
+Use secrets: never store credentials in repo; use secrets.*.
+Limit runs with paths or branches filters in on: to reduce waste.
+Use concurrency to prevent duplicate deployments.
+Cache strategically (dependencies, compilers) to speed pipeline.
+Separate concerns: test job, build job, deploy job (use needs:).
+Use environment protections (GitHub Environments) for production deploys (approvals/manual gates).
+
+6) Where to read / official references (read first, copy later)
+Workflow syntax & examples — official docs. 
+GitHub Docs
+Workflows & actions reference index. 
+GitHub Docs
+actions/checkout repository (most-used action).
