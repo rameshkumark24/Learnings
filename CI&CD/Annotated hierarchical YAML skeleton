@@ -1,0 +1,182 @@
+# -------------------------
+# Top-level metadata
+# -------------------------
+name: "CI / CD Pipeline"        # (optional) human-friendly name shown in UI
+
+# event triggers - when the workflow runs
+on:                            # required to trigger workflows (push, pull_request, schedule, workflow_dispatch, workflow_call, etc.)
+  push:
+    branches: [ main, release ] # run on push to these branches
+    paths:                      # only run when these paths change (optional)
+      - 'src/**'
+  pull_request:
+    types: [opened, synchronize, reopened]
+  schedule:                      # CRON schedule (optional)
+    - cron: '0 3 * * *'
+  workflow_dispatch:             # allows manual run and input parameters
+    inputs:
+      env:
+        description: 'Deploy env'
+        required: true
+        default: 'staging'
+
+# global environment variables (optional)
+env:
+  PYTHON_VERSION: "3.10"
+  DOCKER_BUILDKIT: 1
+
+# permissions for GITHUB_TOKEN (least privilege recommended)
+permissions:
+  contents: read
+  id-token: write   # required for OIDC-based cloud auth
+
+# concurrency control (optional)
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: true
+
+# defaults (shell and run options)
+defaults:
+  run:
+    shell: bash
+    working-directory: src
+
+# reusable/templating (optional)
+# - `workflow_call` is used for reusable workflows
+# - `uses` at top level is not allowed; reuse via `workflow_call` + inputs/outputs
+workflow_call:
+  inputs:
+    version:
+      required: true
+      type: string
+
+# -------------------------
+# Jobs (required)
+# -------------------------
+jobs:
+  # job name (identifier) -> maps to a set of steps
+  build:                       # job id
+    name: Build and Test       # displayed name
+    runs-on: ubuntu-latest     # runner type (ubuntu-latest, windows-latest, macos-latest, self-hosted)
+    # optional: run job inside a container
+    # container:
+    #  image: node:18
+    # services: # define DB or other services docker images for job (postgres, redis)
+    #   postgres:
+    #     image: postgres:14
+    #     env:
+    #       POSTGRES_PASSWORD: password
+    #     ports:
+    #       - 5432:5432
+
+    # strategy for matrix builds (multiple OS / versions)
+    strategy:
+      fail-fast: false
+      matrix:
+        python: [3.9, 3.10]
+        os: [ubuntu-latest]
+
+    # optional: job-level env and outputs
+    env:
+      CACHE_KEY: ${{ runner.os }}-build-${{ matrix.python }}
+    outputs:
+      package-path: ${{ steps.package.outputs.path }}
+
+    # optional: run this job only if condition is true
+    if: ${{ github.event_name != 'schedule' }}
+
+    # optional: only run after another job
+    needs: [lint]   # depends on job named lint
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4     # checks out repo (common first step). See actions/checkout. :contentReference[oaicite:0]{index=0}
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.python }}
+
+      - name: Cache dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run unit tests
+        run: pytest -q
+        env:
+          DATABASE_URL: ${{ secrets.DB_URL }}  # secrets used for sensitive values
+
+      - name: Build artifact
+        id: package
+        run: |
+          mkdir -p out
+          python setup.py sdist --dist-dir out
+          echo "::set-output name=path::out/package.tar.gz"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-artifact
+          path: out/**
+
+  deploy:
+    name: Deploy to staging
+    runs-on: ubuntu-latest
+    needs: [build]
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - name: Download artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: build-artifact
+      - name: Login to Docker Hub
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKER_USER }}
+          password: ${{ secrets.DOCKER_PASS }}
+      - name: Build and push docker image
+        uses: docker/build-push-action@v4
+        with:
+          context: .
+          push: true
+          tags: user/app:${{ github.sha }}
+      - name: Trigger deployment (via SSH / API)
+        uses: appleboy/ssh-action@v0.1.8
+        with:
+          host: ${{ secrets.HOST }}
+          username: ${{ secrets.HOST_USER }}
+          key: ${{ secrets.HOST_SSH_KEY }}
+          script: |
+            docker pull user/app:${{ github.sha }}
+            docker-compose up -d
+
+# -------------------------
+# Other useful job-level keys explained:
+# -------------------------
+# timeout-minutes: integer  -> maximum minutes a job may run before being cancelled.
+# continue-on-error: bool -> when true, job failure won't mark workflow failed.
+# environment: name -> maps job to a GitHub Environment (useful for approvals, secrets, deploy protections)
+# outputs: set outputs to be consumed by other jobs (steps use id and echo output)
+# secrets: reference secrets stored in repo/org
+# timeout-minutes: 60
+
+
+Why these keys matter (short):
+name – human readable; helpful when multiple workflows exist.
+on – determines triggers (push, PR, schedule, manual). Most critical key. 
+
+GitHub Docs
+env / secrets – configuration and secure values.
+permissions – least-privilege for GITHUB_TOKEN. Best practice to reduce blast radius. 
+
+GitHub Docs
+concurrency – avoid duplicate runs when multiple pushes occur.
+jobs → runs-on → steps → uses / run – core of what actually executes.
+uses – references an action from Marketplace or repo (e.g., actions/checkout@v4)
