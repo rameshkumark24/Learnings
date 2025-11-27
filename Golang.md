@@ -1,6 +1,4 @@
-Here's the complete Go language notes in one single copy-paste ready markdown block. No breaks, everything preserved:
 
-markdown
 # Go Language – Full Notes
 
 java complex but fast  
@@ -1068,3 +1066,4 @@ This is a trick golang interview question because Golang does not support classe
 However, you may use composition to imitate inheritance behavior by leveraging an existing struct object to establish the initial behavior of a new object. Once the new object is created, the functionality of the original struct can be enhanced.
 
 ### 24. How do you create a slice in Go?
+
