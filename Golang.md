@@ -1067,3 +1067,6 @@ However, you may use composition to imitate inheritance behavior by leveraging a
 
 ### 24. How do you create a slice in Go?
 
+You first need to define a variable of type slice using the make() function. The make() function takes the type of slice, length, and capacity as parameters.
+
+
