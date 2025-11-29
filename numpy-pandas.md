@@ -292,26 +292,199 @@ df.pivot_table(
 pd.cut(df["age"], bins=3)
 pd.qcut(df["salary"], q=4)
 ```
+---
+
+TOP 15 REAL PANDAS + NUMPY INTERVIEW QUESTIONS (WITH ANSWERS)
+(Company-Level Fresher Standard)
 
 ---
 
-# ⚡ 15 MOST ASKED PANDAS INTERVIEW FUNCTIONS
+## 1️⃣ Difference between NumPy and Pandas?
 
-groupby()
-agg()
-apply()
-merge() vs concat()
-loc vs iloc
-value_counts()
-isnull()
-drop_duplicates()
-fillna()
-unique()
-nunique()
-map() vs apply()
-astype()
-pivot_table()
-cut() / qcut()
+**Answer:**
+
+- **NumPy** → Numerical computations (arrays, matrices, linear algebra)
+- **Pandas** → Data manipulation (tables, missing values, grouping, filtering)
+
+👉 Simply:
+- NumPy = **Numbers**
+- Pandas = **Tables**
+
+---
+
+## 2️⃣ Difference between Series and DataFrame?
+
+**Answer:**
+
+- **Series** → 1D (single column)
+- **DataFrame** → 2D (rows + columns)
+
+👉 Excel Sheet = DataFrame  
+👉 One Column = Series  
+
+---
+
+## 3️⃣ loc vs iloc?
+
+**Answer:**
+
+- `loc` → Label based  
+- `iloc` → Index/Position based  
+
+```python
+df.loc[3, "age"]    # row label 3
+df.iloc[3, 1]       # 3rd row, 1st column
+````
+
+---
+
+## 4️⃣ How do you handle missing values in Pandas?
+
+```python
+df.isnull().sum()        # Check
+df.dropna()              # Remove rows
+df.fillna(0)             # Fill with constant
+df.fillna(df.mean())     # Fill with mean
+```
+
+✅ In ML pipelines → `SimpleImputer`
+
+---
+
+## 5️⃣ How to filter rows in Pandas?
+
+```python
+df[df["age"] > 30]
+df[(df.age > 30) & (df.salary > 50000)]
+```
+
+---
+
+## 6️⃣ How to merge two DataFrames?
+
+```python
+pd.merge(df1, df2, on="id")
+pd.concat([df1, df2])
+```
+
+* **Merge** = SQL Join
+* **Concat** = Stack rows/columns
+
+---
+
+## 7️⃣ What is Vectorization in NumPy? Why faster?
+
+**Answer:**
+Vectorization means operating on entire arrays **without Python loops**.
+
+```python
+a + b   # Vectorized
+```
+
+✅ Faster because:
+
+* No Python loops
+* C-level execution
+* SIMD optimizations
+
+---
+
+## 8️⃣ What is Broadcasting in NumPy?
+
+**Answer:**
+Allows operations on different shaped arrays.
+
+```python
+a = np.array([1,2,3])
+b = 5
+a + b    # [6, 7, 8]
+```
+
+---
+
+## 9️⃣ How to calculate correlation?
+
+```python
+df.corr()
+```
+
+✅ Used in:
+
+* Feature selection
+* Multicollinearity detection
+* EDA
+
+---
+
+## 🔟 How to apply custom function to a column?
+
+```python
+df["new"] = df["age"].apply(
+    lambda x: "Adult" if x >= 18 else "Child"
+)
+```
+
+✅ Used in Feature Engineering
+
+---
+
+# 🔥 BONUS 5 HIGH-VALUE COMPANY QUESTIONS
+
+---
+
+## 11️⃣ merge() vs join() vs concat()?
+
+| Function | Purpose            |
+| -------- | ------------------ |
+| merge()  | SQL-style joins    |
+| join()   | Index-based join   |
+| concat() | Stack rows/columns |
+
+---
+
+## 12️⃣ unique() vs nunique()?
+
+* `unique()` → Returns unique values
+* `nunique()` → Returns **count** of unique values
+
+---
+
+## 13️⃣ How to remove duplicates?
+
+```python
+df.drop_duplicates()
+```
+
+---
+
+## 14️⃣ How to convert data type?
+
+```python
+df["age"] = df["age"].astype(int)
+```
+
+---
+
+## 15️⃣ Explain groupby() with example
+
+```python
+df.groupby("dept")["salary"].mean()
+```
+
+✅ GroupBy = **Split → Apply → Combine**
+✅ Core concept in Data Analytics
+
+---
+
+# ✅ FINAL CONFIDENCE BOOST
+
+✅ If you know these 15 →
+You can clear **Pandas + NumPy fresher interviews confidently**
+✅ Used directly in:
+
+* EDA
+* Feature Engineering
+* Machine Learning Pipelines
 
 ---
 
